@@ -1,0 +1,8 @@
+[
+    {
+        "title": "test",
+        "description": "Error description",
+        "message": "hello world ${name}",
+        "code": "#HPX0478"
+    }
+]
