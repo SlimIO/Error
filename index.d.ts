@@ -5,6 +5,8 @@ declare class ErrorManager {
     constructor(filePath: string);
     static mapFromPayload(payload: Array): Map<string, ErrorManager.Error>;
 
+    errorFile: string;
+    errors: Map<string, ErrorManager.Error>;
     readonly isInitialized: boolean;
 
     public load(): Promise<void>;
