@@ -9,6 +9,7 @@ const {
     }
 } = require("fs");
 const { extname } = require("path");
+const events = require("events");
 
 // Require third-party dependencies
 const ajv = new (require("ajv"))({ useDefaults: "shared" });
@@ -22,6 +23,7 @@ const errorValidator = ajv.compile(errorSchema);
 
 /**
  * @class ErrorManager
+ * @extends events
  * @classdesc Opinionated Error(s) handler/generator
  *
  * @property {Map<String, ErrorManager.Error>} errors
@@ -29,16 +31,17 @@ const errorValidator = ajv.compile(errorSchema);
  * @readonly
  * @property {Boolean} isInitialized
  */
-class ErrorManager {
+class ErrorManager extends events {
 
     /**
      * @constructor
-     * @param {!String} filePath Error file to load
+     * @param {!String} filePath JSON files to load
      *
      * @throws {TypeError}
      * @throws {Error}
      */
     constructor(filePath) {
+        super();
         if (!is.string(filePath)) {
             throw new TypeError("ErrorManager.constructor->filePath should be typeof <string>");
         }
@@ -120,6 +123,12 @@ class ErrorManager {
      * @returns {Promise<void>}
      *
      * @throws {Error}
+     * @fires ErrorManager#initialized
+     *
+     * @example
+     * const eM = new ErrorManager("./errors.json");
+     * eM.load();
+     * // code execution will continue without awaiting load achievement
      */
     async load() {
         if (this.isInitialized) {
@@ -133,6 +142,7 @@ class ErrorManager {
             throw new Error("Failed to validate JSON Payload!");
         }
         this.errors = ErrorManager.mapFromPayload(payload);
+        this.emit("initialized");
 
         return void 0;
     }
@@ -144,6 +154,11 @@ class ErrorManager {
      * @returns {void}
      *
      * @throws {Error}
+     * @fires ErrorManager#initialized
+     *
+     * @example
+     * const eM = new ErrorManager("./errors.json");
+     * eM.loadSync(); // Block Node.JS event-loop
      */
     loadSync() {
         if (this.isInitialized) {
@@ -157,6 +172,7 @@ class ErrorManager {
             throw new Error("Failed to validate JSON Payload!");
         }
         this.errors = ErrorManager.mapFromPayload(payload);
+        this.emit("initialized");
 
         return void 0;
     }
@@ -170,6 +186,7 @@ class ErrorManager {
      *
      * @throws {TypeError}
      * @throws {RangeError}
+     * @fires ErrorManager#message
      *
      * @example
      * const eM = new ErrorManager("./errors.json");
@@ -188,7 +205,11 @@ class ErrorManager {
             throw new RangeError(`No error(s) has been found with title ${errorTitle}`);
         }
 
-        return this.errors.get(errorTitle).handler(args);
+        // Get message and send it as event before returning
+        const ret = this.errors.get(errorTitle).handler(args);
+        this.emit("message", { title: errorTitle, body: ret });
+
+        return ret;
     }
 
 }
