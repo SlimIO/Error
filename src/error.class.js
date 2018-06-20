@@ -11,10 +11,14 @@ const {
 const { extname } = require("path");
 
 // Require third-party dependencies
+const ajv = new (require("ajv"))({ useDefaults: "shared" });
 const is = require("@sindresorhus/is");
 
-// Error Regex
-const errorExpr = /(\${([A-Za-z]+|[0-9])})/igm;
+// Require Error JSON File schema
+const errorSchema = require("./error.schema.json");
+
+// Create AJV validator
+const errorValidator = ajv.compile(errorSchema);
 
 /**
  * @class ErrorManager
@@ -22,6 +26,8 @@ const errorExpr = /(\${([A-Za-z]+|[0-9])})/igm;
  *
  * @property {Map<String, ErrorManager.Error>} errors
  * @property {String} errorFile
+ * @readonly
+ * @property {Boolean} isInitialized
  */
 class ErrorManager {
 
@@ -39,6 +45,7 @@ class ErrorManager {
         if (extname(filePath) !== ".json") {
             throw new Error("ErrorManager.constructor->filePath - please provide a JSON file");
         }
+
         this.errorFile = filePath;
         this.errors = null;
     }
@@ -46,8 +53,23 @@ class ErrorManager {
     /**
      * @static
      * @method mapFromPayload
-     * @param {Array} payload payload
+     * @param {ErrorManager.Error[]} payload payload
      * @returns {Map<String, ErrorManager.Error>}
+     *
+     * @throws {TypeError}
+     *
+     * @example
+     * const payload = [
+     *     {
+     *         title: "errorTitle",
+     *         message: "hello ${name}"
+     *     }
+     * ];
+     * const ret = ErrorManager.mapFromPayload(payload);
+     *
+     * assert.equal(ret.has("errorTitle"), true);
+     * const log = ret.get("errorTitle").handler({ name: "test" });
+     * assert.equal(log, "hello test");
      */
     static mapFromPayload(payload) {
         if (payload instanceof Array === false) {
@@ -58,7 +80,7 @@ class ErrorManager {
         for (const err of payload) {
             err.handler = (args) => {
                 let msg = err.message;
-                msg = msg.replace(errorExpr, (...fArg) => {
+                msg = msg.replace(ErrorManager.expr, (...fArg) => {
                     const [,, matchName] = fArg;
                     if (!Reflect.has(args, matchName)) {
                         return matchName;
@@ -78,6 +100,13 @@ class ErrorManager {
     /**
      * @readonly
      * @property {Boolean} isInitialized
+     * @desc Know if the manager has been initialized with some errors
+     * @example
+     *
+     * const eM = new ErrorManager("./errors.json");
+     * assert.equal(eM.isInitialized, false);
+     * eM.loadSync();
+     * assert.equal(eM.isInitialized, true);
      */
     get isInitialized() {
         return !is.nullOrUndefined(this.errors);
@@ -89,14 +118,20 @@ class ErrorManager {
      * @desc Load error class Asynchronously!
      * @memberof ErrorManager#
      * @returns {Promise<void>}
+     *
+     * @throws {Error}
      */
     async load() {
         if (this.isInitialized) {
             return void 0;
         }
+
         await access(this.errorFile, R_OK);
         const buf = await readFile(this.errorFile);
         const payload = JSON.parse(buf.toString());
+        if (!errorValidator(payload)) {
+            throw new Error("Failed to validate JSON Payload!");
+        }
         this.errors = ErrorManager.mapFromPayload(payload);
 
         return void 0;
@@ -107,14 +142,20 @@ class ErrorManager {
      * @desc Load error class Synchronously!
      * @memberof ErrorManager#
      * @returns {void}
+     *
+     * @throws {Error}
      */
     loadSync() {
         if (this.isInitialized) {
             return void 0;
         }
+
         accessSync(this.errorFile, R_OK);
         const buf = readFileSync(this.errorFile);
         const payload = JSON.parse(buf.toString());
+        if (!errorValidator(payload)) {
+            throw new Error("Failed to validate JSON Payload!");
+        }
         this.errors = ErrorManager.mapFromPayload(payload);
 
         return void 0;
@@ -124,11 +165,17 @@ class ErrorManager {
      * @method throw
      * @memberof ErrorManager#
      * @param {!String} errorTitle error to throw
-     * @param {any[]} args error arguments
+     * @param {Array | Object} args error arguments
      * @returns {String}
      *
      * @throws {TypeError}
      * @throws {RangeError}
+     *
+     * @example
+     * const eM = new ErrorManager("./errors.json");
+     * await eM.load();
+     *
+     * throw new Error(eM.throw("title", ["data"]));
      */
     throw(errorTitle, args = []) {
         if (!this.isInitialized) {
@@ -145,6 +192,9 @@ class ErrorManager {
     }
 
 }
+
+// Error expr
+ErrorManager.expr = /(\${([A-Za-z]+|[0-9])})/igm;
 
 // Export Error
 module.exports = ErrorManager;

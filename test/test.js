@@ -6,10 +6,11 @@ const avaTest = require("ava");
 const is = require("@sindresorhus/is");
 
 // Require Internal Dependencies
-const ErrorManager = require("../index");
+const ErrorManager = require("../src/error.class");
 
-// Global vars
-const errorFile = join(__dirname, "errors.json");
+// JSON Files path
+const errorFile = join(__dirname, "data/good.json");
+const badErrorFile = join(__dirname, "data/bad.json");
 
 avaTest("ErrorManager (invalid file type)", (test) => {
     const error = test.throws(() => {
@@ -39,6 +40,16 @@ avaTest("ErrorManager - load Async", async(test) => {
     await eM.load();
 });
 
+avaTest("ErrorManager - load (bad) Async", async(test) => {
+    const eM = new ErrorManager(badErrorFile);
+    try {
+        await eM.load();
+    }
+    catch (error) {
+        test.is(error.message, "Failed to validate JSON Payload!");
+    }
+});
+
 avaTest("ErrorManager - load Synchronous", (test) => {
     const eM = new ErrorManager(errorFile);
     test.is(is.string(eM.errorFile), true);
@@ -53,11 +64,36 @@ avaTest("ErrorManager - load Synchronous", (test) => {
     eM.loadSync();
 });
 
+avaTest("ErrorManager - load (bad) Async", (test) => {
+    const eM = new ErrorManager(badErrorFile);
+    const error = test.throws(() => {
+        // eslint-disable-next-line no-sync
+        eM.loadSync();
+    }, Error);
+    test.is(error.message, "Failed to validate JSON Payload!");
+});
+
 avaTest("ErrorManager - mapFromPayload type Error", (test) => {
     const error = test.throws(() => {
         ErrorManager.mapFromPayload(10);
     }, TypeError);
     test.is(error.message, "Payload should be an instanceof Array!");
+});
+
+avaTest("ErrorManager - mapFromPayload", (test) => {
+    /* eslint no-template-curly-in-string: 0 */
+    const payload = [
+        {
+            code: "XXX",
+            title: "hello",
+            message: "hello ${name}"
+        }
+    ];
+    const ret = ErrorManager.mapFromPayload(payload);
+    test.is(ret.has("hello"), true);
+    test.is(ret.has("unknow"), false);
+    const log = ret.get("hello").handler({ name: "world!" });
+    test.is(log, "XXX - hello world!");
 });
 
 avaTest("ErrorManager - throw test", async(test) => {
