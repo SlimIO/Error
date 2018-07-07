@@ -1,3 +1,6 @@
+/// <reference types="@types/node" />
+/// <reference types="@types/es6-shim" />
+
 /**
  * Error class definition
  */
@@ -6,12 +9,13 @@ declare class ErrorManager {
     static mapFromPayload(payload: ErrorManager.Error[]): Map<string, ErrorManager.Error>;
 
     errorFile: string;
-    errors: Map<string, ErrorManager.Error>;
+    private _errors: Map<string, ErrorManager.Error>;
+    readonly errors: Set<string>;
     readonly isInitialized: boolean;
 
     public load(): Promise<void>;
     public loadSync(): void;
-    public throw(errorTitle: string, args?: any): string;
+    public get(errorTitle: string): ErrorMessage;
 }
 
 /**
@@ -19,12 +23,24 @@ declare class ErrorManager {
  */
 declare namespace ErrorManager {
 
+    export declare class ErrorMessage {
+
+    }
+
+    export enum criticity {
+        Critical,
+        Major,
+        Minor,
+        Debug
+    }
+
     export interface Error {
         title: string;
-        code?: string;
+        code: string;
         handler: (args: string[] | { [k: string]: any }) => string;
         description?: string;
         message: string;
+        criticity: ErrorManager.criticity
     }
 
 }

@@ -1,4 +1,4 @@
-// Require Node.JS dependencies
+// Require Node.JS Dependencies
 const {
     accessSync,
     readFileSync,
@@ -11,9 +11,12 @@ const {
 const { extname } = require("path");
 const events = require("events");
 
-// Require third-party dependencies
+// Require third-party Dependencies
 const ajv = new (require("ajv"))({ useDefaults: "shared" });
 const is = require("@sindresorhus/is");
+
+// Require Internal Dependencies
+const ErrorMessage = require("./errorMessage.class");
 
 // Require Error JSON File schema
 const errorSchema = require("./error.schema.json");
@@ -50,7 +53,7 @@ class ErrorManager extends events {
         }
 
         this.errorFile = filePath;
-        this.errors = null;
+        this._errors = null;
     }
 
     /**
@@ -92,7 +95,7 @@ class ErrorManager extends events {
                     return Reflect.get(args, matchName);
                 });
 
-                return `${err.code} - ${msg}`;
+                return msg;
             };
             ret.set(err.title, err);
         }
@@ -104,15 +107,36 @@ class ErrorManager extends events {
      * @readonly
      * @property {Boolean} isInitialized
      * @desc Know if the manager has been initialized with some errors
-     * @example
      *
+     * @example
      * const eM = new ErrorManager("./errors.json");
      * assert.equal(eM.isInitialized, false);
      * eM.loadSync();
      * assert.equal(eM.isInitialized, true);
      */
     get isInitialized() {
-        return !is.nullOrUndefined(this.errors);
+        return !is.nullOrUndefined(this._errors);
+    }
+
+    /**
+     * @readonly
+     * @property {Set<String>} errors
+     * @desc Get all errors name
+     *
+     * @throws {Error}
+     *
+     * @example
+     * // Load errors (with an error namned `errorTitle`)
+     * const eM = new ErrorManager("./errors.json");
+     * eM.loadSync();
+     * assert.equal(eM.errors.has("errorTitle"), true);
+     */
+    get errors() {
+        if (!this.isInitialized) {
+            throw new Error("ErrorManager should be initialized before getting errors list!");
+        }
+
+        return new Set(...this._errors.keys());
     }
 
     /**
@@ -141,7 +165,7 @@ class ErrorManager extends events {
         if (!errorValidator(payload)) {
             throw new Error("Failed to validate JSON Payload!");
         }
-        this.errors = ErrorManager.mapFromPayload(payload);
+        this._errors = ErrorManager.mapFromPayload(payload);
         this.emit("initialized");
 
         return void 0;
@@ -171,45 +195,39 @@ class ErrorManager extends events {
         if (!errorValidator(payload)) {
             throw new Error("Failed to validate JSON Payload!");
         }
-        this.errors = ErrorManager.mapFromPayload(payload);
+        this._errors = ErrorManager.mapFromPayload(payload);
         this.emit("initialized");
 
         return void 0;
     }
 
     /**
-     * @method throw
+     * @method get
      * @memberof ErrorManager#
      * @param {!String} errorTitle error to throw
-     * @param {Array | Object} args error arguments
-     * @returns {String}
+     * @returns {ErrorMessage}
      *
      * @throws {TypeError}
      * @throws {RangeError}
-     * @fires ErrorManager#message
      *
      * @example
      * const eM = new ErrorManager("./errors.json");
      * await eM.load();
      *
-     * throw new Error(eM.throw("title", ["data"]));
+     * throw new Error(eM.get("title").throw(["data"]));
      */
-    throw(errorTitle, args = []) {
+    get(errorTitle) {
         if (!this.isInitialized) {
             throw new Error("ErrorManager not initialized yet!");
         }
         if (!is.string(errorTitle)) {
             throw new TypeError("ErrorManager.throw->errorTitle should be a string");
         }
-        if (!this.errors.has(errorTitle)) {
+        if (!this._errors.has(errorTitle)) {
             throw new RangeError(`No error(s) has been found with title ${errorTitle}`);
         }
 
-        // Get message and send it as event before returning
-        const ret = this.errors.get(errorTitle).handler(args);
-        this.emit("message", { title: errorTitle, body: ret });
-
-        return ret;
+        return new ErrorMessage(this._errors.get(errorTitle));
     }
 
 }

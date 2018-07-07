@@ -1,8 +1,9 @@
 [
-    {
-        "title": "test",
-        "description": "Error description",
-        "message": "hello world ${name}",
-        "code": "#HPX0478"
-    }
+{
+    "title": "test",
+    "description": "Error description",
+    "message": "hello world ${name}",
+    "code": "#HPX0478",
+    "level": "Critical"
+}
 ]

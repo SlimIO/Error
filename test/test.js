@@ -6,7 +6,7 @@ const avaTest = require("ava");
 const is = require("@sindresorhus/is");
 
 // Require Internal Dependencies
-const ErrorManager = require("../src/error.class");
+const ErrorManager = require("../src/errorManager.class");
 
 // JSON Files path
 const errorFile = join(__dirname, "data/good.json");
@@ -93,7 +93,7 @@ avaTest("ErrorManager - mapFromPayload", (test) => {
     test.is(ret.has("hello"), true);
     test.is(ret.has("unknow"), false);
     const log = ret.get("hello").handler({ name: "world!" });
-    test.is(log, "XXX - hello world!");
+    test.is(log, "hello world!");
 });
 
 avaTest("ErrorManager - throw test", async(test) => {
