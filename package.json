@@ -4,42 +4,61 @@
   "description": "Slim.IO - Opinionated Error(s) handle/generator",
   "main": "index.js",
   "scripts": {
-    "test": "npx ava --verbose",
-    "doc": "npx jsdoc -c ./jsdoc.json -r",
-    "coverage": "npx nyc ava",
-    "report": "npx nyc report --reporter=html"
+    "prepublishOnly": "pkg-ok",
+    "test": "cross-env psp && ava --verbose",
+    "doc": "jsdoc -c ./jsdoc.json -r -R ./README.md -P ./package.json --verbose",
+    "coverage": "nyc npm test",
+    "report": "nyc report --reporter=html"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SlimIO/Config.git"
   },
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
+  "husky": {
+    "hooks": {
+      "pre-push": "cross-env eslint index.js && npm test",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  },
   "engines": {
-    "node": ">=8.11.1"
+    "node": ">=10"
   },
   "keywords": [
     "SlimIO",
-    "Config",
     "JSON",
-    "Loader"
+    "error"
   ],
   "author": "SlimIO",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/SlimIO/Config/issues"
   },
+  "nyc": {
+    "check-coverage": true,
+    "per-file": false,
+    "lines": 98,
+    "statements": 98,
+    "functions": 98,
+    "branches": 90
+},
   "homepage": "https://github.com/SlimIO/Config#readme",
   "devDependencies": {
+    "@commitlint/cli": "^8.1.0",
+    "@commitlint/config-conventional": "^8.1.0",
     "@escommunity/minami": "^1.0.0",
-    "@slimio/eslint-config": "^1.1.5",
-    "@types/es6-shim": "^0.31.37",
-    "@types/node": "^10.3.4",
-    "ava": "^0.25.0",
-    "eslint": "^4.19.1",
-    "nyc": "^11.6.0"
+    "@slimio/eslint-config": "^3.0.3",
+    "@slimio/psp": "^0.7.0",
+    "ava": "^2.3.0",
+    "cross-env": "^5.2.0",
+    "eslint": "^6.3.0",
+    "husky": "^3.0.4",
+    "jsdoc": "^3.6.3",
+    "nyc": "^14.1.1",
+    "pkg-ok": "^2.3.1"
   },
-  "dependencies": {
-    "@sindresorhus/is": "^0.8.0",
-    "@slimio/utils": "0.0.0",
-    "ajv": "^6.5.1"
-  }
+  "dependencies": {}
 }
