@@ -44,7 +44,7 @@
     "statements": 98,
     "functions": 98,
     "branches": 90
-},
+  },
   "homepage": "https://github.com/SlimIO/Config#readme",
   "devDependencies": {
     "@commitlint/cli": "^8.1.0",
@@ -60,5 +60,7 @@
     "nyc": "^14.1.1",
     "pkg-ok": "^2.3.1"
   },
-  "dependencies": {}
+  "dependencies": {
+    "clean-stack": "^2.2.0"
+  }
 }
