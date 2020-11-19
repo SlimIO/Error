@@ -62,6 +62,6 @@
     "pkg-ok": "^2.3.1"
   },
   "dependencies": {
-    "clean-stack": "^2.2.0"
+    "clean-stack": "^3.0.1"
   }
 }
